@@ -1,3 +1,4 @@
+{{define "index"}}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,8 +6,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css">
+    <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
+    <style>
+        body{
+            background-color: #1b1c1d;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .urlform{
+            display: flex;
+            height: 7vh;
+            margin-top: 5%;
+            margin-bottom: 4%;
+        }
+
+        #outUrl{
+            color: white;
+        }
+
+    </style>
 </head>
 <body>
     
+    <form  class="ui form urlform">
+
+        <input style="width: 50vw;"type="text" name="url" id="url" placeholder="Enter Url" >
+        <button style="margin-left: 2%;"class="ui green button" hx-post="/onUrlFormSubmit" hx-target="#outUrl">Enter</button>
+
+    </form>
+
+    <div id="outUrl">
+    </div>
+
 </body>
 </html>
+{{end}}
