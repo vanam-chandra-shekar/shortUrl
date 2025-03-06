@@ -9,6 +9,8 @@ import (
 	"short/templ"
 	"strings"
 	"time"
+
+	"golang.org/x/time/rate"
 )
 
 type MiddleWare func(http.Handler) http.Handler
@@ -27,16 +29,16 @@ func CreateStack(ms ...MiddleWare) MiddleWare {
 }
 
 // ANSI color codes
-const (
-	ColorReset  = "\033[0m"
-	ColorRed    = "\033[31m"
-	ColorGreen  = "\033[32m"
-	ColorYellow = "\033[33m"
-	ColorBlue   = "\033[34m"
-	ColorPurple = "\033[35m"
-	ColorCyan   = "\033[36m"
-	ColorWhite  = "\033[37m"
-)
+// const (
+// 	colorReset  = "\033[0m"
+// 	colorRed    = "\033[31m"
+// 	colorGreen  = "\033[32m"
+// 	colorYellow = "\033[33m"
+// 	colorBlue   = "\033[34m"
+// 	colorWhite  = "\033[37m"
+// 	colorPurple = "\033[35m"
+// 	colorCyan   = "\033[36m"
+// )
 
 type wrapedWriter struct {
 	http.ResponseWriter
@@ -67,7 +69,7 @@ func RecoveryMiddleware(next http.Handler) http.Handler {
 
 		defer func() {
 			if err := recover(); err != nil {
-				mssg := "Caught painc: %v, Stack trace: %s"
+				mssg := "Caught painc: %v, \nStack trace: \n%s\n"
 				log.Printf(mssg, err, string(debug.Stack()))
 				w.WriteHeader(http.StatusInternalServerError)
 				templ.PageInternalServerError.Execute(w, nil)
@@ -111,6 +113,24 @@ func StaticFileMiddleware(dir string, endpoint string) MiddleWare {
 
 			http.ServeFile(w, r, fullpath)
 
+		})
+	}
+
+}
+
+func GlobalRateLimiter(rps rate.Limit, burst int) MiddleWare {
+
+	return func(next http.Handler) http.Handler {
+
+		limiter := rate.NewLimiter(rps, burst)
+
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if !limiter.Allow() {
+				http.Error(w, "To many Reauests", http.StatusTooManyRequests)
+				return
+			}
+
+			next.ServeHTTP(w, r)
 		})
 	}
 

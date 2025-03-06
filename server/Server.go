@@ -3,22 +3,21 @@ package server
 import (
 	"log"
 	"net/http"
-	"strconv"
 )
 
 type Srv struct {
 	mux    *http.ServeMux
 	server *http.Server
 	Addr   string
-	Port   int
+	Port   string
 }
 
-func NewServer(addr string, port int) *Srv {
+func NewServer(addr string, port string) *Srv {
 	_mux := http.NewServeMux()
 	return &Srv{
 		mux: _mux,
 		server: &http.Server{
-			Addr:    addr + ":" + strconv.Itoa(port),
+			Addr:    addr + ":" + port,
 			Handler: _mux,
 		},
 		Addr: addr,
@@ -35,6 +34,6 @@ func (s *Srv) Use(middleware func(http.Handler) http.Handler) {
 }
 
 func (s *Srv) Run() {
-	log.Printf("[%s:%d] server started.", s.Addr, s.Port)
+	log.Printf("[%s:%s] server started.", s.Addr, s.Port)
 	s.server.ListenAndServe()
 }
