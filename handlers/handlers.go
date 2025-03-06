@@ -66,7 +66,9 @@ func (h *Handler) HxOnUrlFormSubmit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.queries.UpdateShortCode(context.Background(), urldata.Sid)
+	var newUrlData db.Shorturl
+
+	newUrlData, err = h.queries.UpdateShortCode(context.Background(), urldata.Sid)
 
 	if err != nil {
 
@@ -78,7 +80,36 @@ func (h *Handler) HxOnUrlFormSubmit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	data.Url = "http://127.0.0.1:5000/r/" + newUrlData.ShortCode
+
 	log.Println(urldata.Sid, urldata.ShortCode, urldata.OriginalUrl, urldata.CreatedAt.Time)
 
 	h.compo.ExecuteTemplate(w, "shorturl", data)
+}
+
+func (h *Handler) RedirectHandler(w http.ResponseWriter, r *http.Request) {
+
+	id := r.PathValue("id")
+
+	if id == "" {
+		h.compo.ExecuteTemplate(w, "invalidId", nil)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	data, err := h.queries.FineOne(context.Background(), id)
+
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		h.compo.ExecuteTemplate(w, "invalidOrExpired", nil)
+		return
+	}
+
+	if data.OriginalUrl[:4] != "http" {
+
+		data.OriginalUrl = "https://" + data.OriginalUrl
+	}
+
+	http.Redirect(w, r, data.OriginalUrl, http.StatusFound)
+
 }

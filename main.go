@@ -24,17 +24,25 @@ func main() {
 
 	dbstring := GetEnvOrDefault("DBSTRING", "")
 
+	hostname, err := os.Hostname()
+	if err != nil {
+		log.Println("Error getting hostname:", err)
+		return
+	}
+
+	log.Println(hostname)
+
 	port := GetEnvOrDefault("PORT", "5000")
 
 	conn, err := pgx.Connect(context.Background(), dbstring)
 
 	if err != nil {
-		log.Fatalf("[Error] %v\n" , err)
+		log.Fatalf("[Error] %v\n", err)
 	}
 	log.Println("[Sucess] : DataBase connected")
 	defer conn.Close(context.Background())
 
-	mainSrv := server.NewServer("0.0.0.0", port)
+	mainSrv := server.NewServer("127.0.0.1", port)
 	myHandler := handlers.NewHandler(templ.NewTemplBlob("./web/*.html"), conn)
 
 	middlewareStack := middleware.CreateStack(
@@ -47,6 +55,7 @@ func main() {
 	mainSrv.Use(middlewareStack)
 
 	mainSrv.Register("/", myHandler.RootHandler)
+	mainSrv.Register("/r/{id}", myHandler.RedirectHandler)
 
 	mainSrv.Register("POST /onUrlFormSubmit", myHandler.HxOnUrlFormSubmit)
 

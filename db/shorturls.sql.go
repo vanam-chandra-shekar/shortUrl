@@ -19,6 +19,23 @@ func (q *Queries) DeleteSurl(ctx context.Context, sid int32) error {
 	return err
 }
 
+const fineOne = `-- name: FineOne :one
+SELECT sid, short_code, original_url, created_at FROM shorturls
+WHERE short_code = $1
+`
+
+func (q *Queries) FineOne(ctx context.Context, shortCode string) (Shorturl, error) {
+	row := q.db.QueryRow(ctx, fineOne, shortCode)
+	var i Shorturl
+	err := row.Scan(
+		&i.Sid,
+		&i.ShortCode,
+		&i.OriginalUrl,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const insertSurl = `-- name: InsertSurl :one
 INSERT INTO shorturls (short_code , original_url)
 VALUES ('temp' , $1)
@@ -37,15 +54,23 @@ func (q *Queries) InsertSurl(ctx context.Context, originalUrl string) (Shorturl,
 	return i, err
 }
 
-const updateShortCode = `-- name: UpdateShortCode :exec
+const updateShortCode = `-- name: UpdateShortCode :one
 UPDATE shorturls
 SET short_code = CONCAT(sid::VARCHAR(2) ,
 	LEFT(encode(digest(original_url, 'sha256'), 'hex'), 6)
 )
 WHERE sid = $1
+RETURNING sid, short_code, original_url, created_at
 `
 
-func (q *Queries) UpdateShortCode(ctx context.Context, sid int32) error {
-	_, err := q.db.Exec(ctx, updateShortCode, sid)
-	return err
+func (q *Queries) UpdateShortCode(ctx context.Context, sid int32) (Shorturl, error) {
+	row := q.db.QueryRow(ctx, updateShortCode, sid)
+	var i Shorturl
+	err := row.Scan(
+		&i.Sid,
+		&i.ShortCode,
+		&i.OriginalUrl,
+		&i.CreatedAt,
+	)
+	return i, err
 }
