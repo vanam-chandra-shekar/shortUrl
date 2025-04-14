@@ -2,7 +2,13 @@
 
 <div class="shorturl">
 
-   <p>{{.Url}}</p>
+   <a href="#" class="short-url" id="shortext">{{ .Url }}</a>
+   <button class="ui button copy-btn" onclick="(()=>{
+      const urltext = document.getElementById('shortext').textContent;
+      navigator.clipboard.writeText(urltext).then(()=>{
+         alert('Link Copied!');
+      });
+   })()">Copy</button>
 
 </div>
 

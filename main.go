@@ -24,14 +24,6 @@ func main() {
 
 	dbstring := GetEnvOrDefault("DBSTRING", "")
 
-	hostname, err := os.Hostname()
-	if err != nil {
-		log.Println("Error getting hostname:", err)
-		return
-	}
-
-	log.Println(hostname)
-
 	port := GetEnvOrDefault("PORT", "5000")
 
 	conn, err := pgx.Connect(context.Background(), dbstring)
@@ -42,7 +34,7 @@ func main() {
 	log.Println("[Sucess] : DataBase connected")
 	defer conn.Close(context.Background())
 
-	mainSrv := server.NewServer("127.0.0.1", port)
+	mainSrv := server.NewServer("", port)
 	myHandler := handlers.NewHandler(templ.NewTemplBlob("./web/*.html"), conn)
 
 	middlewareStack := middleware.CreateStack(

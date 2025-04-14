@@ -9,16 +9,6 @@ import (
 	"context"
 )
 
-const deleteSurl = `-- name: DeleteSurl :exec
-DELETE FROM shorturls
-WHERE sid = $1
-`
-
-func (q *Queries) DeleteSurl(ctx context.Context, sid int32) error {
-	_, err := q.db.Exec(ctx, deleteSurl, sid)
-	return err
-}
-
 const fineOne = `-- name: FineOne :one
 SELECT sid, short_code, original_url, created_at FROM shorturls
 WHERE short_code = $1
@@ -38,33 +28,17 @@ func (q *Queries) FineOne(ctx context.Context, shortCode string) (Shorturl, erro
 
 const insertSurl = `-- name: InsertSurl :one
 INSERT INTO shorturls (short_code , original_url)
-VALUES ('temp' , $1)
+VALUES ($1 , $2)
 RETURNING sid, short_code, original_url, created_at
 `
 
-func (q *Queries) InsertSurl(ctx context.Context, originalUrl string) (Shorturl, error) {
-	row := q.db.QueryRow(ctx, insertSurl, originalUrl)
-	var i Shorturl
-	err := row.Scan(
-		&i.Sid,
-		&i.ShortCode,
-		&i.OriginalUrl,
-		&i.CreatedAt,
-	)
-	return i, err
+type InsertSurlParams struct {
+	ShortCode   string
+	OriginalUrl string
 }
 
-const updateShortCode = `-- name: UpdateShortCode :one
-UPDATE shorturls
-SET short_code = CONCAT(sid::VARCHAR(2) ,
-	LEFT(encode(digest(original_url, 'sha256'), 'hex'), 6)
-)
-WHERE sid = $1
-RETURNING sid, short_code, original_url, created_at
-`
-
-func (q *Queries) UpdateShortCode(ctx context.Context, sid int32) (Shorturl, error) {
-	row := q.db.QueryRow(ctx, updateShortCode, sid)
+func (q *Queries) InsertSurl(ctx context.Context, arg InsertSurlParams) (Shorturl, error) {
+	row := q.db.QueryRow(ctx, insertSurl, arg.ShortCode, arg.OriginalUrl)
 	var i Shorturl
 	err := row.Scan(
 		&i.Sid,

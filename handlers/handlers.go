@@ -1,9 +1,10 @@
 package handlers
 
 import (
-	"context"
+	"crypto/sha256"
+	"errors"
+	"fmt"
 	"html/template"
-	"log"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -46,45 +47,60 @@ func isValidURL(input string) bool {
 
 func (h *Handler) HxOnUrlFormSubmit(w http.ResponseWriter, r *http.Request) {
 
-	var data struct {
-		Url string
-	}
-	data.Url = r.FormValue("url")
+	originalUrl := r.FormValue("url")
 
-	if !isValidURL(data.Url) {
+	if !isValidURL(originalUrl) {
 		h.compo.ExecuteTemplate(w, "EnterValidUrl", nil)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	urldata, err := h.queries.InsertSurl(context.Background(), data.Url)
+	hash := sha256.Sum256([]byte(originalUrl))
+	hashlen := 32
+	hashStr := fmt.Sprintf("%x", hash)
+
+	currentShortCodeIdx := 0
+	shortCodelen := 6
+
+	err := errors.New("ShortCode Not Created")
+	var insertedData db.Shorturl
+
+	for err != nil && currentShortCodeIdx < hashlen-shortCodelen {
+
+		insertedData, err = h.queries.InsertSurl(r.Context(), db.InsertSurlParams{
+			ShortCode:   hashStr[currentShortCodeIdx : currentShortCodeIdx+shortCodelen],
+			OriginalUrl: originalUrl,
+		})
+
+		if err == nil {
+			break
+		}
+
+		currentShortCodeIdx++
+
+	}
 
 	if err != nil {
-		log.Printf("[Error] : %v\n", err)
+		w.WriteHeader(http.StatusInternalServerError)
 		templ.PageInternalServerError.Execute(w, nil)
-		http.Error(w, "", http.StatusInternalServerError)
 		return
 	}
 
-	var newUrlData db.Shorturl
-
-	newUrlData, err = h.queries.UpdateShortCode(context.Background(), urldata.Sid)
-
-	if err != nil {
-
-		h.queries.DeleteSurl(context.Background(), urldata.Sid)
-		log.Printf("[Error] : %v\n", err)
-		templ.PageInternalServerError.Execute(w, nil)
-		http.Error(w, "", http.StatusInternalServerError)
-
-		return
+	var data struct {
+		Url string
 	}
 
-	data.Url = "http://127.0.0.1:5000/r/" + newUrlData.ShortCode
+	schema := "http"
+	if r.TLS != nil {
+		schema = "https"
+	}
 
-	log.Println(urldata.Sid, urldata.ShortCode, urldata.OriginalUrl, urldata.CreatedAt.Time)
+	data.Url = fmt.Sprintf("%s://%s/r/%s", schema, r.Host, insertedData.ShortCode)
 
 	h.compo.ExecuteTemplate(w, "shorturl", data)
+
+	fmt.Println("inserted : " + insertedData.ShortCode)
+
 }
 
 func (h *Handler) RedirectHandler(w http.ResponseWriter, r *http.Request) {
@@ -97,7 +113,7 @@ func (h *Handler) RedirectHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data, err := h.queries.FineOne(context.Background(), id)
+	data, err := h.queries.FineOne(r.Context(), id)
 
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)

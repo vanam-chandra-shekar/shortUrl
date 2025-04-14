@@ -2,6 +2,5 @@ bin/
 tmp/
 *.exe
 **/*.exe
-sqlc.yaml
 .env
-vendors/
+.air.toml
