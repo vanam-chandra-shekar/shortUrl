@@ -10,16 +10,21 @@ services:
       - "5432:5432"
     restart: always
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - db_data_prod:/var/lib/postgresql/data
+    networks:
+      - prod_network
   
   migrate:
-    build: .
+    build: ${DOCKER_REGISTRY}/${IMAGENAME}:latest
     command: goose up
     environment:
       - GOOSE_DRIVER=postgres
       - GOOSE_DBSTRING=postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?sslmode=disable
     depends_on:
       - db
+    
+    networks:
+      - prod_network
   
   app:
     build: .
@@ -30,7 +35,15 @@ services:
       - "${PORT}:${PORT}"
     depends_on:
       - migrate
-    command: ./main
+      - db
+    restart: always
+
+    networks:
+      - prod_network
   
 volumes:
-  db_data:
+  db_data_prod:
+
+networks:
+  prod_network:
+    driver: bridge

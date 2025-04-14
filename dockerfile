@@ -35,4 +35,4 @@ ENV GOOSE_MIGRATION_DIR=./db/schema
 
 EXPOSE ${PORT}
 
-CMD ["./app"]
+CMD ["./main"]
