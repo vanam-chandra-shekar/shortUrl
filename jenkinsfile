@@ -17,7 +17,7 @@ pipeline {
         stage("Setup"){
             steps{
                 script{
-                    DOCKER_REGISTRY = env.DOCKERCRED_USR
+                    env.DOCKER_REGISTRY = env.DOCKERCRED_USR
                     env.DB_USER = env.DBCRED_USR
                     env.DB_PASSWORD = env.DBCRED_PSW
                 }
