@@ -1,0 +1,104 @@
+pipeline {
+    agent any
+    
+    environment {
+        DOCKERCRED = credentials('docker-hub')
+        PORT = '5000'
+        IMAGE_NAME = 'my-short-url-img'
+
+        DBCRED = credentials('short-db-credentials')
+        DB_NAME = credentials('short-db-name')
+
+        COMPOSE_FILE = 'docker-compose.prod.yml'
+    }
+    
+    stages {
+
+        stage("Setup"){
+            steps{
+                script{
+                    DOCKER_REGISTRY = env.DOCKERCRED_USR
+                    env.DB_USER = env.DBCRED_USR
+                    env.DB_PASSWORD = env.DBCRED_PSW
+                }
+            }
+        }
+
+        stage("docker login"){
+            steps{
+
+                withCredentials([usernamePassword(credentialsId: 'docker-hub', usernameVariable: 'DOCKER_USR', passwordVariable: 'DOCKER_PASS')]){
+                    script{
+
+                        sh "echo ${DOCKER_PASS} | docker login -u ${DOCKER_USR} --password-stdin"
+
+                    }
+                }
+
+            }
+        }
+        
+        stage("Clone Code"){
+            steps{
+                echo "getting code"
+                git url:"https://github.com/vanam-chandra-shekar/shortUrl" , branch:"main"
+                sh "ls"
+            }
+        }
+        
+        stage("Build"){
+            steps{
+                echo "Building Docker Image"
+                sh "docker build -t ${env.IMAGE_NAME} ."
+                sh "docker images"
+            }
+        }
+        
+        stage("Push to docker hub"){
+            steps{
+                echo "Pushing to docker hub"
+
+                sh "docker tag ${env.IMAGE_NAME} ${DOCKER_REGISTRY}/${IMAGE_NAME}:latest"
+
+                sh "docker push ${DOCKER_REGISTRY}/${IMAGE_NAME}:latest"
+
+            }
+        }
+
+        stage("Start Database"){
+            steps{
+                echo "Starting Database"
+                sh "docker compose -f ${COMPOSE_FILE} up -d db"
+            }
+        }
+
+        stage("Running Migrations"){
+            steps{
+                echo "Running Migrations"
+
+                sh "sleep 10"
+                sh "docker compose -f ${COMPOSE_FILE} up -d migrate"
+            }
+        }
+
+        stage("Running App"){
+            steps {
+                echo "Running App"
+
+                sh "docker compose -f ${COMPOSE_FILE} up -d app"
+            }
+        }
+        
+        stage("Run"){
+            steps{
+                echo "Running"
+
+                echo "DBUSER : ${env.DB_USER}"
+                echo "DBPASSWORD : ${env.DB_PASSWORD}"
+                echo "DBNAME : ${env.DB_NAME}"
+            }
+        }
+        
+    }
+    
+}

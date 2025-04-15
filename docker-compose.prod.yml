@@ -15,7 +15,7 @@ services:
       - prod_network
   
   migrate:
-    build: ${DOCKER_REGISTRY}/${IMAGENAME}:latest
+    image: ${DOCKER_REGISTRY}/${IMAGE_NAME}:latest
     command: goose up
     environment:
       - GOOSE_DRIVER=postgres
@@ -27,7 +27,7 @@ services:
       - prod_network
   
   app:
-    build: .
+    image: ${DOCKER_REGISTRY}/${IMAGE_NAME}:latest
     environment:
       - DBSTRING=postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?sslmode=disable
       - PORT=${PORT}
