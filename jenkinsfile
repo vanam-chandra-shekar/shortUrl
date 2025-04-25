@@ -89,15 +89,6 @@ pipeline {
             }
         }
         
-        stage("Run"){
-            steps{
-                echo "Running"
-
-                echo "DBUSER : ${env.DB_USER}"
-                echo "DBPASSWORD : ${env.DB_PASSWORD}"
-                echo "DBNAME : ${env.DB_NAME}"
-            }
-        }
         
     }
     
